@@ -1,0 +1,61 @@
+version: '3.7'
+services:
+  web:
+    image: panoslin/gluttony:latest
+    stop_grace_period: 5m
+#    build: .  # This option is ignored when deploying a stack in swarm mode with a (version 3) Compose file. The docker stack command accepts only pre-built images.
+    deploy:  # This only takes effect when deploying to a swarm with docker stack deploy, and is ignored by docker-compose up and docker-compose run.
+      mode: global
+      resources:
+        limits:
+          cpus: "4"  # limiting each one to use, at most, 10 core of CPU
+          memory: 5000M  # limiting each one to use, at most, 4096M of RAM
+
+      restart_policy:
+        condition: any # Immediately restart containers if one fails.
+        delay: '120s' # How long to wait between restart attempts, specified as a duration (default: 0).
+        window: '30s' # How long to wait before deciding if a restart has succeeded
+    networks:
+      - hostnet
+    volumes:
+#      - /etc/localtime:/etc/localtime  # mount
+      - ../.:/ERP  # mount
+    command: python manage.py runserver
+
+  portainer:
+    image: portainer/portainer
+    networks:
+      - hostnet
+    volumes:
+      - data:/data  # together with `placement` below, while containers come and go, the files stored on ./data on the specified host persists, enabling continuity.
+      - //var/run/docker.sock:/var/run/docker.sock
+    command: -H unix:///var/run/docker.sock
+
+#  redis:
+#    image: redis
+#    volumes:
+#      - data:/data  # together with `placement` below, while containers come and go, the files stored on ./data on the specified host persists, enabling continuity.
+#      - ../redis_conf/redis.conf:/usr/local/etc/redis/redis.conf
+#      - ../.:/ERP
+#    sysctls:
+#      net.core.somaxconn: '2048'
+#    deploy:
+#      resources:
+#          limits:
+#            cpus: "2"
+#            memory: 1G
+#      restart_policy:
+#        condition: any
+#        window: '30s' # How long to wait before deciding if a restart has succeeded
+#    networks:
+#      - hostnet
+#    command: redis-server /usr/local/etc/redis/redis.conf
+
+volumes:
+  data:
+
+networks:
+  hostnet:
+    external: true
+    attachable: true
+    name: host
